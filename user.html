@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#00c896">
 <link rel="icon" type="image/jpeg" href="https://i.ibb.co/DD86YNb2/250px-New-mtn-logo.jpg">
+<link rel="manifest" href="manifest.json">
 <title>Free Data Gifts</title>
 <style>
 * {margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
@@ -22,6 +24,7 @@ input:focus {outline:none;border-color:#00c896}
 .btn:disabled {opacity:0.5;cursor:not-allowed}
 .btn-secondary {background:#2a2a2a;color:#fff}
 .btn-warning {background:#ff9500;color:#000}
+.btn-small {padding:8px 12px;font-size:12px;width:auto}
 .dashboard {display:none}
 .gift-card {background:#111;border:1px solid #2a2a2a;border-radius:16px;padding:25px;margin-bottom:15px;transition:transform 0.2s}
 .gift-card:hover {transform:translateY(-3px);border-color:#00c896}
@@ -97,6 +100,37 @@ input:focus {outline:none;border-color:#00c896}
 
     <div id="giftsList"></div>
 
+    <!-- Truth or Dare Wheel Game -->
+    <div id="wheelGame" style="display:none">
+      <div class="card" style="background:#111;border:1px solid #2a2a2a;border-radius:16px;padding:25px;margin-top:20px;text-align:center">
+        <h3 style="color:#00c896;margin-bottom:8px">🎯 Truth or Dare Wheel</h3>
+        <p style="color:#888;font-size:13px;margin-bottom:20px">Spin for fun! 3 free spins daily</p>
+
+        <div style="position:relative;width:280px;height:280px;margin:0 auto">
+          <canvas id="wheelCanvas" width="280" height="280"></canvas>
+          <div id="bottlePointer" style="position:absolute;top:-15px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:15px solid transparent;border-right:15px solid transparent;border-top:25px solid #ff9500;z-index:10"></div>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60px;height:60px;background:#0a0a0a;border:3px solid #00c896;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px">🍾</div>
+        </div>
+
+        <!-- MAIN SPIN BUTTON -->
+        <button class="btn" id="spinWheelBtn" onclick="spinWheel()" style="margin-top:20px;width:180px">🎯 Spin!</button>
+
+        <div id="wheelResult" style="margin-top:15px;font-size:16px;color:#ff9500;min-height:24px;font-weight:600"></div>
+        <div id="questionBox" style="margin-top:10px;color:#ccc;font-size:14px;min-height:40px;padding:0 10px"></div>
+        <div style="margin-top:8px;color:#666;font-size:12px">Spins left today: <span id="wheelSpins">3</span></div>
+
+        <!-- EARN SPINS BUTTONS -->
+        <div style="margin-top:15px;border-top:1px solid #222;padding-top:15px">
+          <p style="font-size:12px;color:#888;margin-bottom:8px">Out of spins? Earn more:</p>
+          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+            <button class="btn btn-secondary btn-small" onclick="watchAdSpin()">📺 Ad +1 Spin</button>
+            <button class="btn btn-secondary btn-small" onclick="shareSpin()">🔗 Share +2 Spins</button>
+            <button class="btn btn-warning btn-small" onclick="resetSpins()">🔄 Reset Today</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="chat-box" id="chatBox"></div>
     <div class="chat-input">
       <input type="text" id="chatInput" placeholder="Message admin...">
@@ -148,6 +182,176 @@ let currentGift = null;
 let adminUid = null;
 let userClaims = {};
 
+// Wheel data
+const wheelSegments = [
+  {type:'Truth', color:'#00c896'},
+  {type:'Dare', color:'#ff9500'},
+  {type:'Truth', color:'#00c896'},
+  {type:'Dare', color:'#ff9500'},
+  {type:'Truth', color:'#00c896'},
+  {type:'Dare', color:'#ff9500'},
+  {type:'Truth', color:'#00c896'},
+  {type:'Dare', color:'#ff9500'}
+];
+
+const truthQuestions = [
+  "What's your biggest fear?",
+  "Who was your first crush?",
+  "What's the most embarrassing thing you did?",
+  "Have you ever lied to your best friend?",
+  "What's one secret nobody knows?",
+  "What's your most awkward date story?",
+  "If you could swap lives for a day, whose would it be?",
+  "What's the worst gift you ever received?"
+];
+
+const dareQuestions = [
+  "Do 10 pushups right now",
+  "Send a funny selfie in chat",
+  "Sing any song for 10 seconds",
+  "Compliment the last person who messaged you",
+  "Dance for 15 seconds",
+  "Draw a cat on your hand and show it",
+  "Talk like a robot for next 3 messages",
+  "Do your best funny face and screenshot it"
+];
+
+let wheelRotation = 0;
+let wheelSpinsToday = 3;
+let wheelCanvas, wheelCtx;
+
+function drawWheel(){
+  if(!wheelCtx) return;
+  const center = 140;
+  const radius = 120;
+  const angle = (2 * Math.PI) / wheelSegments.length;
+
+  wheelCtx.clearRect(0,0,280,280);
+  wheelCtx.save();
+  wheelCtx.translate(center, center);
+  wheelCtx.rotate(wheelRotation);
+
+  wheelSegments.forEach((seg, i)=>{
+    wheelCtx.beginPath();
+    wheelCtx.moveTo(0,0);
+    wheelCtx.arc(0,0,radius,i*angle,(i+1)*angle);
+    wheelCtx.fillStyle = seg.color;
+    wheelCtx.fill();
+
+    wheelCtx.save();
+    wheelCtx.rotate(i*angle + angle/2);
+    wheelCtx.textAlign = 'center';
+    wheelCtx.fillStyle = '#fff';
+    wheelCtx.font = 'bold 16px Segoe UI';
+    wheelCtx.fillText(seg.type, radius-35, 5);
+    wheelCtx.restore();
+  });
+  wheelCtx.restore();
+}
+
+function spinWheel(){
+  if(wheelSpinsToday <= 0){
+    document.getElementById('wheelResult').textContent = 'No spins left. Watch ad or share to get more!';
+    document.getElementById('questionBox').textContent = '';
+    return;
+  }
+
+  const btn = document.getElementById('spinWheelBtn');
+  btn.disabled = true;
+  document.getElementById('wheelResult').textContent = 'Spinning...';
+  document.getElementById('questionBox').textContent = '';
+
+  const spins = 4 + Math.random() * 3;
+  const targetAngle = Math.random() * 2 * Math.PI;
+  const finalRotation = wheelRotation + spins * 2 * Math.PI + targetAngle;
+
+  let start = null;
+  function animate(timestamp){
+    if(!start) start = timestamp;
+    const progress = Math.min((timestamp - start) / 3000, 1);
+    const ease = 1 - Math.pow(1 - progress, 3);
+    wheelRotation = wheelRotation + (finalRotation - wheelRotation) * ease;
+    drawWheel();
+
+    if(progress < 1){
+      requestAnimationFrame(animate);
+    } else {
+      wheelRotation = finalRotation;
+      const segAngle = (2 * Math.PI) / wheelSegments.length;
+      const selectedIndex = Math.floor(((2*Math.PI) - (finalRotation % (2*Math.PI))) / segAngle) % wheelSegments.length;
+      const result = wheelSegments[selectedIndex].type;
+
+      wheelSpinsToday -= 1;
+      document.getElementById('wheelSpins').textContent = wheelSpinsToday;
+      document.getElementById('wheelResult').textContent = `Result: ${result}!`;
+
+      const questions = result === 'Truth'? truthQuestions : dareQuestions;
+      const question = questions[Math.floor(Math.random() * questions.length)];
+      document.getElementById('questionBox').textContent = question;
+
+      btn.disabled = false;
+
+      const today = new Date().toDateString();
+      if(currentUser){
+        db.ref('wheelSpins/'+currentUser.uid+'/'+today).set({
+          count: wheelSpinsToday,
+          lastResult: result,
+          lastQuestion: question,
+          lastSpin: Date.now()
+        });
+      }
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+// BUTTON 1: Earn spin via Ad
+function watchAdSpin(){
+  wheelSpinsToday += 1;
+  document.getElementById('wheelSpins').textContent = wheelSpinsToday;
+  document.getElementById('wheelResult').textContent = '📺 +1 spin added!';
+  document.getElementById('questionBox').textContent = '';
+  const today = new Date().toDateString();
+  if(currentUser) db.ref('wheelSpins/'+currentUser.uid+'/'+today+'/count').set(wheelSpinsToday);
+}
+
+// BUTTON 2: Earn spins via Share
+function shareSpin(){
+  const shareUrl = window.location.href;
+  if(navigator.share){
+    navigator.share({title:'Truth or Dare Game', text:'Play this fun game with me:', url:shareUrl})
+ .then(()=>{
+      wheelSpinsToday += 2;
+      document.getElementById('wheelSpins').textContent = wheelSpinsToday;
+      document.getElementById('wheelResult').textContent = '🔗 +2 spins added!';
+      document.getElementById('questionBox').textContent = '';
+      const today = new Date().toDateString();
+      if(currentUser) db.ref('wheelSpins/'+currentUser.uid+'/'+today+'/count').set(wheelSpinsToday);
+    })
+ .catch(()=>{});
+  } else {
+    navigator.clipboard.writeText(shareUrl);
+    wheelSpinsToday += 2;
+    document.getElementById('wheelSpins').textContent = wheelSpinsToday;
+    document.getElementById('wheelResult').textContent = '🔗 Link copied! +2 spins added!';
+    document.getElementById('questionBox').textContent = '';
+    const today = new Date().toDateString();
+    if(currentUser) db.ref('wheelSpins/'+currentUser.uid+'/'+today+'/count').set(wheelSpinsToday);
+  }
+}
+
+// BUTTON 3: Reset spins for testing
+function resetSpins(){
+  if(confirm('Reset your spins to 3 for today?')){
+    wheelSpinsToday = 3;
+    document.getElementById('wheelSpins').textContent = 3;
+    document.getElementById('wheelResult').textContent = 'Spins reset!';
+    document.getElementById('questionBox').textContent = '';
+    const today = new Date().toDateString();
+    if(currentUser) db.ref('wheelSpins/'+currentUser.uid+'/'+today+'/count').set(3);
+  }
+}
+
 function switchTab(tab){
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('authError').style.display = 'none';
@@ -195,7 +399,18 @@ async function loginSuccess(user){
   document.getElementById('userEmail').textContent=user.email;
   document.getElementById('authScreen').style.display='none';
   document.getElementById('dashboard').style.display='block';
+  document.getElementById('wheelGame').style.display='block';
   db.ref('users/'+user.uid).update({online:true,lastSeen:Date.now()});
+
+  wheelCanvas = document.getElementById('wheelCanvas');
+  wheelCtx = wheelCanvas.getContext('2d');
+
+  const today = new Date().toDateString();
+  db.ref('wheelSpins/'+user.uid+'/'+today+'/count').once('value').then(snap=>{
+    wheelSpinsToday = snap.val()!== null? snap.val() : 3;
+    document.getElementById('wheelSpins').textContent = wheelSpinsToday;
+    drawWheel();
+  });
 
   const adminSnap=await db.ref('users').orderByChild('role').equalTo('admin').limitToFirst(1).once('value');
   adminSnap.forEach(child=>adminUid=child.key);
@@ -207,23 +422,20 @@ async function loginSuccess(user){
 
 function logout(){
   if(currentUser) db.ref('users/'+currentUser.uid).update({online:false});
+  document.getElementById('wheelGame').style.display='none';
   auth.signOut().then(()=>location.reload());
 }
 
-// RESET FUNCTION - clears cache without touching files
 function resetApp(){
   if(!confirm('Reset app? This will logout and clear browser cache. Your data in Firebase is safe.')) return;
-
   auth.signOut();
   localStorage.clear();
   sessionStorage.clear();
-
   if(window.indexedDB){
     indexedDB.databases().then(dbs => {
       dbs.forEach(db => {if(db.name) indexedDB.deleteDatabase(db.name)});
     });
   }
-
   alert('Reset complete. Reloading...');
   setTimeout(()=>location.reload(true), 1000);
 }
@@ -262,7 +474,6 @@ function openModal(id,title,amount,network,validity,desc,type){
   document.getElementById('modalDesc').textContent=`${amount} ${network} - Valid for ${validity}`;
   document.getElementById('phoneInput').value='';
   document.getElementById('statusResult').style.display='none';
-
   if(type==='free'){
     document.getElementById('freeSection').style.display='block';
     document.getElementById('supportSection').style.display='none';
@@ -284,7 +495,6 @@ function validatePhone(phone){
 function claimFree(){
   const phone=document.getElementById('phoneInput').value.trim();
   if(!validatePhone(phone)){alert('Enter valid Nigerian phone number: 0803xxxxxxx');return}
-
   const claimRef=db.ref('claims/'+currentGift.id+'/'+Date.now());
   claimRef.set({
     uid:currentUser.uid,
@@ -299,7 +509,6 @@ function claimFree(){
     status:'pending',
     delivered:false
   });
-
   document.getElementById('statusResult').innerHTML=`<div class="delivery-status delivery-pending">✓ Free claim submitted. Admin will deliver ${currentGift.amount} ${currentGift.network} soon.</div>`;
   document.getElementById('statusResult').style.display='block';
   document.getElementById('freeSection').style.display='none';
@@ -309,9 +518,8 @@ function claimFree(){
 function payWithPaystack(){
   const phone=document.getElementById('phoneInput').value.trim();
   if(!validatePhone(phone)){alert('Enter valid Nigerian phone number: 0803xxxxxxx');return}
-
   const handler=PaystackPop.setup({
-    key:'pk_test_xxx', // REPLACE WITH YOUR PAYSTACK PUBLIC KEY
+    key:'pk_test_xxx',
     email:currentUser.email,
     amount:50000,
     ref:''+Math.floor(Math.random()*1000000+1),
@@ -363,13 +571,10 @@ function updateAllGiftStatus(){
     const statusDiv=document.getElementById('status-'+giftId);
     const btnDiv=document.getElementById('btn-'+giftId);
     const historyDiv=document.getElementById('history-'+giftId);
-
     if(!statusDiv) return;
-
     const deliveredClaim=claims.find(c=>c.delivered);
     const paidClaim=claims.find(c=>c.status==='paid' &&!c.delivered);
     const pendingClaim=claims.find(c=>c.status==='pending' &&!c.delivered);
-
     if(deliveredClaim){
       const time=new Date(deliveredClaim.deliveredAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
       statusDiv.innerHTML=`<div class="delivery-status">✓ ${deliveredClaim.dataAmount} ${deliveredClaim.network} delivered by admin at ${time}</div>`;
@@ -377,9 +582,8 @@ function updateAllGiftStatus(){
     }else if(paidClaim){
       statusDiv.innerHTML=`<div class="delivery-status delivery-pending">⏳ Payment confirmed. Waiting for admin to deliver ${paidClaim.dataAmount} ${paidClaim.network}...</div>`;
     }else if(pendingClaim){
-      statusDiv.innerHTML=`<div class="delivery-status delivery-pending">⏳ Free claim submitted. Waiting for admin delivery...</div>`;
+      document.getElementById('status-'+giftId).innerHTML=`<div class="delivery-status delivery-pending">⏳ Free claim submitted. Waiting for admin delivery...</div>`;
     }
-
     if(claims.length>0){
       historyDiv.style.display='block';
       historyDiv.innerHTML='<strong style="font-size:13px;color:#aaa">Delivery History:</strong>';
@@ -436,5 +640,7 @@ document.getElementById('chatInput').addEventListener('keypress',e=>{
   if(e.key==='Enter')sendMessage();
 });
 </script>
+
+<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');</script>
 </body>
 </html>
