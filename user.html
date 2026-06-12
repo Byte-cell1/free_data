@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/jpeg" href="https://i.ibb.co/DD86YNb2/250px-New-mtn-logo.jpg">
+<title>Free Data Gifts</title>
+<style>
+* {margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+body {background:#0a0a0a;color:#fff;min-height:100vh}
+.container {max-width:700px;margin:0 auto;padding:20px}
+.header {text-align:center;padding:30px 0}
+.header h1 {font-size:32px;margin-bottom:8px;color:#00c896}
+.header p {color:#888;font-size:14px}
+.auth-screen {background:#111;border-radius:16px;padding:35px;margin-top:20px}
+.tabs {display:flex;gap:10px;margin-bottom:25px;background:#1a1a1a;padding:5px;border-radius:10px}
+.tab {flex:1;padding:12px;text-align:center;border-radius:8px;cursor:pointer;font-weight:600}
+.tab.active {background:#00c896;color:#000}
+input {width:100%;padding:14px;background:#1a1a1a;border:1px solid #333;border-radius:10px;color:#fff;margin-bottom:12px;font-size:15px}
+input:focus {outline:none;border-color:#00c896}
+.btn {width:100%;padding:14px;background:#00c896;color:#000;border:none;border-radius:10px;font-weight:700;font-size:16px;cursor:pointer}
+.btn:disabled {opacity:0.5;cursor:not-allowed}
+.btn-secondary {background:#2a2a2a;color:#fff}
+.btn-warning {background:#ff9500;color:#000}
+.dashboard {display:none}
+.gift-card {background:#111;border:1px solid #2a2a2a;border-radius:16px;padding:25px;margin-bottom:15px;transition:transform 0.2s}
+.gift-card:hover {transform:translateY(-3px);border-color:#00c896}
+.gift-card h3 {font-size:20px;margin-bottom:8px;color:#00c896}
+.data-amount {font-size:28px;font-weight:bold;color:#ff9500;margin:10px 0}
+.network-badge {display:inline-block;background:#1a3a2a;color:#34c759;padding:4px 10px;border-radius:6px;font-size:12px;margin-right:8px}
+.validity-badge {display:inline-block;background:#2a2a1a;color:#ff9500;padding:4px 10px;border-radius:6px;font-size:12px}
+.gift-meta {color:#aaa;font-size:13px;margin:5px 0}
+.gift-desc {color:#ccc;font-size:14px;margin:10px 0;line-height:1.5}
+.btn-row {display:flex;gap:10px;margin-top:15px}
+.btn-free {flex:2;background:#00c896;color:#000}
+.btn-support {flex:1;background:#ff9500;color:#000}
+.chat-box {background:#111;border-radius:16px;padding:20px;margin-top:20px;height:300px;overflow-y:auto}
+.msg {margin-bottom:12px;padding:10px 14px;border-radius:12px;max-width:80%}
+.msg.user {background:#00c896;color:#000;margin-left:auto}
+.msg.admin {background:#2a2a2a}
+.msg-time {font-size:10px;opacity:0.7;margin-top:4px}
+.chat-input {display:flex;gap:10px;margin-top:12px}
+.chat-input input {flex:1;margin:0}
+.error {background:#ff3b30;padding:12px;border-radius:8px;margin-bottom:15px;display:none;font-size:14px}
+.success {background:#34c759;padding:12px;border-radius:8px;margin-bottom:15px;display:none;font-size:14px}
+.modal {position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;align-items:center;justify-content:center;z-index:100}
+.modal.active {display:flex}
+.modal-content {background:#111;padding:30px;border-radius:16px;width:90%;max-width:420px;border:1px solid #333}
+.logout {text-align:center;margin-top:20px;color:#888;font-size:14px;cursor:pointer}
+.logout-row {display:flex;gap:10px;justify-content:center;margin-top:20px}
+.delivery-status {background:#1a3a2a;color:#34c759;padding:12px;border-radius:8px;margin-top:12px;font-size:13px;border-left:4px solid #34c759}
+.delivery-pending {background:#3a2a1a;color:#ff9500;border-left-color:#ff9500}
+.delivery-history {margin-top:15px;padding-top:15px;border-top:1px solid #222}
+.history-item {padding:8px 0;font-size:12px;color:#888;border-bottom:1px solid #1a1a1a}
+.history-item:last-child {border-bottom:none}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🎁 Data Gifts</h1>
+    <p>Free data + Optional support for bonus</p>
+  </div>
+
+  <div id="authScreen" class="auth-screen">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('login')">Login</div>
+      <div class="tab" onclick="switchTab('signup')">Sign Up</div>
+    </div>
+    <div id="authError" class="error"></div>
+    <div id="authSuccess" class="success"></div>
+
+    <div id="loginForm">
+      <input type="email" id="loginEmail" placeholder="Email">
+      <input type="password" id="loginPassword" placeholder="Password">
+      <button class="btn" id="loginBtn" onclick="userLogin()">Login</button>
+    </div>
+
+    <div id="signupForm" style="display:none">
+      <input type="email" id="signupEmail" placeholder="Email">
+      <input type="password" id="signupPassword" placeholder="Password 6+ chars">
+      <button class="btn" id="signupBtn" onclick="userSignup()">Sign Up</button>
+    </div>
+  </div>
+
+  <div id="dashboard" class="dashboard">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div>
+        <div style="font-size:14px;color:#888">Welcome</div>
+        <div id="userEmail" style="font-weight:600"></div>
+      </div>
+      <div class="logout-row">
+        <div class="btn btn-warning" style="width:auto;padding:8px 14px;font-size:13px" onclick="resetApp()">Reset</div>
+        <div class="logout" onclick="logout()" style="margin:0">Logout</div>
+      </div>
+    </div>
+
+    <div id="giftsList"></div>
+
+    <div class="chat-box" id="chatBox"></div>
+    <div class="chat-input">
+      <input type="text" id="chatInput" placeholder="Message admin...">
+      <button class="btn" style="width:auto;padding:14px 20px" onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+</div>
+
+<div id="claimModal" class="modal">
+  <div class="modal-content">
+    <h3 id="modalTitle" style="margin-bottom:10px"></h3>
+    <p id="modalDesc" style="color:#aaa;font-size:13px;margin-bottom:15px"></p>
+    <input type="tel" id="phoneInput" placeholder="Enter phone number 0803xxx" maxlength="11">
+    <div id="freeSection">
+      <button class="btn btn-free" onclick="claimFree()">Claim Free Data</button>
+      <button class="btn btn-secondary" style="margin-top:10px" onclick="closeModal()">Cancel</button>
+    </div>
+    <div id="supportSection" style="display:none">
+      <p style="color:#aaa;font-size:13px;margin:15px 0">Support with ₦500 to get this bonus data from admin</p>
+      <button class="btn btn-support" onclick="payWithPaystack()">Pay ₦500 & Get Bonus</button>
+      <button class="btn btn-secondary" style="margin-top:10px" onclick="closeModal()">Cancel</button>
+    </div>
+    <div id="statusResult" style="display:none;margin-top:15px"></div>
+  </div>
+</div>
+
+<script src="https://js.paystack.co/v1/inline.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCY75Whxe2i9ITdxWctl-LwmCxPugv9pk0",
+  authDomain: "chatcall-app-99bde.firebaseapp.com",
+  databaseURL: "https://chatcall-app-99bde-default-rtdb.firebaseio.com",
+  projectId: "chatcall-app-99bde",
+  storageBucket: "chatcall-app-99bde.firebasestorage.app",
+  messagingSenderId: "565789395277",
+  appId: "1:565789395277:web:02c9fb0bb869873b208f04"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+let currentUser = null;
+let currentGift = null;
+let adminUid = null;
+let userClaims = {};
+
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('authError').style.display = 'none';
+  if(tab === 'login'){
+    document.querySelectorAll('.tab')[0].classList.add('active');
+    document.getElementById('loginForm').style.display = 'block';
+    document.getElementById('signupForm').style.display = 'none';
+  } else {
+    document.querySelectorAll('.tab')[1].classList.add('active');
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('signupForm').style.display = 'block';
+  }
+}
+
+function showError(msg){document.getElementById('authError').textContent=msg;document.getElementById('authError').style.display='block'}
+
+async function userLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const password=document.getElementById('loginPassword').value;
+  const btn=document.getElementById('loginBtn');
+  btn.disabled=true;btn.textContent='Logging in...';
+  try{
+    const cred=await auth.signInWithEmailAndPassword(email,password);
+    loginSuccess(cred.user);
+  }catch(err){showError(err.message);btn.disabled=false;btn.textContent='Login'}
+}
+
+async function userSignup(){
+  const email=document.getElementById('signupEmail').value.trim();
+  const password=document.getElementById('signupPassword').value;
+  const btn=document.getElementById('signupBtn');
+  if(password.length<6){showError('Password must be 6+ characters');return}
+  btn.disabled=true;btn.textContent='Creating...';
+  try{
+    const cred=await auth.createUserWithEmailAndPassword(email,password);
+    await db.ref('users/'+cred.user.uid).set({email:email,role:'user',online:true,joined:Date.now()});
+    document.getElementById('authSuccess').textContent='Account created! Logging in...';
+    document.getElementById('authSuccess').style.display='block';
+    setTimeout(()=>loginSuccess(cred.user),1500);
+  }catch(err){showError(err.message);btn.disabled=false;btn.textContent='Sign Up'}
+}
+
+async function loginSuccess(user){
+  currentUser=user;
+  document.getElementById('userEmail').textContent=user.email;
+  document.getElementById('authScreen').style.display='none';
+  document.getElementById('dashboard').style.display='block';
+  db.ref('users/'+user.uid).update({online:true,lastSeen:Date.now()});
+
+  const adminSnap=await db.ref('users').orderByChild('role').equalTo('admin').limitToFirst(1).once('value');
+  adminSnap.forEach(child=>adminUid=child.key);
+
+  loadGifts();
+  loadChat();
+  listenDeliveryStatus();
+}
+
+function logout(){
+  if(currentUser) db.ref('users/'+currentUser.uid).update({online:false});
+  auth.signOut().then(()=>location.reload());
+}
+
+// RESET FUNCTION - clears cache without touching files
+function resetApp(){
+  if(!confirm('Reset app? This will logout and clear browser cache. Your data in Firebase is safe.')) return;
+
+  auth.signOut();
+  localStorage.clear();
+  sessionStorage.clear();
+
+  if(window.indexedDB){
+    indexedDB.databases().then(dbs => {
+      dbs.forEach(db => {if(db.name) indexedDB.deleteDatabase(db.name)});
+    });
+  }
+
+  alert('Reset complete. Reloading...');
+  setTimeout(()=>location.reload(true), 1000);
+}
+
+function loadGifts(){
+  db.ref('dataLinks').on('value',snap=>{
+    const list=document.getElementById('giftsList');
+    list.innerHTML='';
+    if(!snap.exists()){list.innerHTML='<div style="text-align:center;color:#666;padding:40px">No gifts available yet</div>';return}
+    snap.forEach(child=>{
+      const d=child.val();
+      const div=document.createElement('div');
+      div.className='gift-card';
+      div.id='gift-'+child.key;
+      div.innerHTML=`
+        <h3>🎁 ${d.title}</h3>
+        <div class="data-amount">${d.dataAmount} ${d.network}</div>
+        <span class="network-badge">${d.network}</span>
+        <span class="validity-badge">${d.validity}</span>
+        <p class="gift-desc">${d.description||'Free data gift'}</p>
+        <div id="status-${child.key}"></div>
+        <div class="delivery-history" id="history-${child.key}" style="display:none"></div>
+        <div class="btn-row" id="btn-${child.key}">
+          <button class="btn btn-free" onclick="openModal('${child.key}','${d.title}','${d.dataAmount}','${d.network}','${d.validity}','${d.description||''}','free')">Claim Free</button>
+          <button class="btn btn-support" onclick="openModal('${child.key}','${d.title}','${d.dataAmount}','${d.network}','${d.validity}','${d.description||''}','support')">Support ₦500</button>
+        </div>
+      `;
+      list.appendChild(div);
+    });
+  });
+}
+
+function openModal(id,title,amount,network,validity,desc,type){
+  currentGift={id,title,amount,network,validity};
+  document.getElementById('modalTitle').textContent=title;
+  document.getElementById('modalDesc').textContent=`${amount} ${network} - Valid for ${validity}`;
+  document.getElementById('phoneInput').value='';
+  document.getElementById('statusResult').style.display='none';
+
+  if(type==='free'){
+    document.getElementById('freeSection').style.display='block';
+    document.getElementById('supportSection').style.display='none';
+  }else{
+    document.getElementById('freeSection').style.display='none';
+    document.getElementById('supportSection').style.display='block';
+  }
+  document.getElementById('claimModal').classList.add('active');
+}
+
+function closeModal(){document.getElementById('claimModal').classList.remove('active')}
+
+function validatePhone(phone){
+  phone=phone.trim();
+  if(!phone.match(/^0[789][01]\d{8}$/)) return false;
+  return true;
+}
+
+function claimFree(){
+  const phone=document.getElementById('phoneInput').value.trim();
+  if(!validatePhone(phone)){alert('Enter valid Nigerian phone number: 0803xxxxxxx');return}
+
+  const claimRef=db.ref('claims/'+currentGift.id+'/'+Date.now());
+  claimRef.set({
+    uid:currentUser.uid,
+    email:currentUser.email,
+    phone:phone,
+    type:'free',
+    amount:0,
+    giftTitle:currentGift.title,
+    dataAmount:currentGift.amount,
+    network:currentGift.network,
+    time:Date.now(),
+    status:'pending',
+    delivered:false
+  });
+
+  document.getElementById('statusResult').innerHTML=`<div class="delivery-status delivery-pending">✓ Free claim submitted. Admin will deliver ${currentGift.amount} ${currentGift.network} soon.</div>`;
+  document.getElementById('statusResult').style.display='block';
+  document.getElementById('freeSection').style.display='none';
+  setTimeout(closeModal,2500);
+}
+
+function payWithPaystack(){
+  const phone=document.getElementById('phoneInput').value.trim();
+  if(!validatePhone(phone)){alert('Enter valid Nigerian phone number: 0803xxxxxxx');return}
+
+  const handler=PaystackPop.setup({
+    key:'pk_test_xxx', // REPLACE WITH YOUR PAYSTACK PUBLIC KEY
+    email:currentUser.email,
+    amount:50000,
+    ref:''+Math.floor(Math.random()*1000000+1),
+    callback:function(response){
+      db.ref('claims/'+currentGift.id+'/'+Date.now()).set({
+        uid:currentUser.uid,
+        email:currentUser.email,
+        phone:phone,
+        type:'support',
+        ref:response.reference,
+        amount:500,
+        giftTitle:currentGift.title,
+        dataAmount:currentGift.amount,
+        network:currentGift.network,
+        time:Date.now(),
+        status:'paid',
+        delivered:false
+      });
+      document.getElementById('statusResult').innerHTML=`<div class="delivery-status delivery-pending">✓ Payment successful. Waiting for admin to send ${currentGift.amount} ${currentGift.network}...</div>`;
+      document.getElementById('statusResult').style.display='block';
+      document.getElementById('supportSection').style.display='none';
+      setTimeout(closeModal,2500);
+    },
+    onClose:function(){}
+  });
+  handler.openIframe();
+}
+
+function listenDeliveryStatus(){
+  if(!currentUser)return;
+  db.ref('claims').on('value',snap=>{
+    userClaims={};
+    snap.forEach(giftSnap=>{
+      giftSnap.forEach(claimSnap=>{
+        const c=claimSnap.val();
+        if(c.uid===currentUser.uid){
+          if(!userClaims[giftSnap.key]) userClaims[giftSnap.key]=[];
+          userClaims[giftSnap.key].push({...c, claimId:claimSnap.key});
+        }
+      });
+    });
+    updateAllGiftStatus();
+  });
+}
+
+function updateAllGiftStatus(){
+  Object.keys(userClaims).forEach(giftId=>{
+    const claims=userClaims[giftId];
+    const statusDiv=document.getElementById('status-'+giftId);
+    const btnDiv=document.getElementById('btn-'+giftId);
+    const historyDiv=document.getElementById('history-'+giftId);
+
+    if(!statusDiv) return;
+
+    const deliveredClaim=claims.find(c=>c.delivered);
+    const paidClaim=claims.find(c=>c.status==='paid' &&!c.delivered);
+    const pendingClaim=claims.find(c=>c.status==='pending' &&!c.delivered);
+
+    if(deliveredClaim){
+      const time=new Date(deliveredClaim.deliveredAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      statusDiv.innerHTML=`<div class="delivery-status">✓ ${deliveredClaim.dataAmount} ${deliveredClaim.network} delivered by admin at ${time}</div>`;
+      if(btnDiv) btnDiv.style.display='none';
+    }else if(paidClaim){
+      statusDiv.innerHTML=`<div class="delivery-status delivery-pending">⏳ Payment confirmed. Waiting for admin to deliver ${paidClaim.dataAmount} ${paidClaim.network}...</div>`;
+    }else if(pendingClaim){
+      statusDiv.innerHTML=`<div class="delivery-status delivery-pending">⏳ Free claim submitted. Waiting for admin delivery...</div>`;
+    }
+
+    if(claims.length>0){
+      historyDiv.style.display='block';
+      historyDiv.innerHTML='<strong style="font-size:13px;color:#aaa">Delivery History:</strong>';
+      claims.sort((a,b)=>b.time-a.time).forEach(c=>{
+        const t=new Date(c.time).toLocaleString();
+        const status=c.delivered?`Delivered at ${new Date(c.deliveredAt).toLocaleTimeString()}`:c.status==='paid'?'Paid, waiting delivery':'Pending';
+        historyDiv.innerHTML+=`<div class="history-item">${t} - ${c.type==='support'?'₦500 Support':'Free'} - ${status}</div>`;
+      });
+    }
+  });
+}
+
+function loadChat(){
+  if(!currentUser)return;
+  if(!adminUid){setTimeout(loadChat,1000);return}
+  const chatId=[currentUser.uid,adminUid].sort().join('_');
+  db.ref('chats/'+chatId).limitToLast(30).on('value',snap=>{
+    const box=document.getElementById('chatBox');
+    box.innerHTML='';
+    snap.forEach(child=>{
+      const d=child.val();
+      const div=document.createElement('div');
+      div.className='msg '+(d.from===currentUser.uid?'user':'admin');
+      const time=new Date(d.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      div.innerHTML=`${d.text}<div class="msg-time">${time}</div>`;
+      box.appendChild(div);
+    });
+    box.scrollTop=box.scrollHeight;
+  });
+}
+
+function sendMessage(){
+  const msg=document.getElementById('chatInput').value.trim();
+  if(!msg){alert('Type a message first');return}
+  if(!currentUser||!adminUid){alert('Refresh page');return}
+  const chatId=[currentUser.uid,adminUid].sort().join('_');
+  db.ref('chats/'+chatId).push({from:currentUser.uid,text:msg,time:Date.now()})
+.then(()=>{document.getElementById('chatInput').value=''})
+.catch(err=>{alert('Send failed: '+err.message)});
+}
+
+auth.onAuthStateChanged(user=>{
+  if(user&&document.getElementById('dashboard').style.display!=='block'){
+    db.ref('users/'+user.uid).once('value',snap=>{
+      if(snap.val()?.role==='user')loginSuccess(user);
+    });
+  }
+});
+
+document.getElementById('claimModal').addEventListener('click',e=>{
+  if(e.target.id==='claimModal')closeModal();
+});
+document.getElementById('chatInput').addEventListener('keypress',e=>{
+  if(e.key==='Enter')sendMessage();
+});
+</script>
+</body>
+</html>

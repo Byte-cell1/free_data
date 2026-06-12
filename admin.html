@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/jpeg" href="https://i.ibb.co/DD86YNb2/250px-New-mtn-logo.jpg">
+<title>Admin Panel</title>
+<style>
+* {margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+body {background:#0a0a0a;color:#fff}
+.container {max-width:1400px;margin:0 auto;padding:20px}
+.header {display:flex;justify-content:space-between;align-items:center;padding:20px 0;border-bottom:1px solid #222;margin-bottom:30px}
+.header h1 {color:#00c896;font-size:24px}
+.btn {padding:12px 20px;background:#00c896;color:#000;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:14px}
+.btn:hover {opacity:0.9}
+.btn-danger {background:#ff3b30;color:#fff}
+.card {background:#111;border:1px solid #2a2a2a;border-radius:16px;padding:25px;margin-bottom:20px}
+.card h3 {margin-bottom:15px;font-size:18px;color:#00c896}
+input {width:100%;padding:12px;background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#fff;margin-bottom:12px;font-size:14px}
+input:focus {outline:none;border-color:#00c896}
+.error {background:#ff3b30;padding:12px;border-radius:8px;margin-bottom:15px;display:none}
+.success {background:#34c759;padding:12px;border-radius:8px;margin-bottom:15px;display:none}
+.loading-screen {position:fixed;top:0;left:0;width:100%;height:100%;background:#0a0a0a;display:flex;align-items:center;justify-content:center;z-index:9999;font-size:18px;color:#00c896}
+.tabs {display:flex;gap:10px;margin-bottom:20px;border-bottom:1px solid #222}
+.tab {padding:12px 20px;cursor:pointer;color:#888;border-bottom:2px solid transparent}
+.tab.active {color:#00c896;border-bottom-color:#00c896}
+.tab-content {display:none}
+.tab-content.active {display:block}
+.gift-card {background:#1a1a1a;padding:15px;border-radius:10px;margin-bottom:12px;border-left:4px solid #00c896}
+.data-amount {font-size:20px;font-weight:bold;color:#ff9500;margin:8px 0}
+table {width:100%;border-collapse:collapse;margin-top:15px;font-size:13px}
+th {background:#1a1a1a;color:#888;padding:12px;text-align:left}
+td {padding:12px;border-bottom:1px solid #222}
+.badge {padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.badge-paid {background:#3a2a1a;color:#ff9500}
+.badge-delivered {background:#1a3a2a;color:#34c759}
+.badge-pending {background:#3a2a1a;color:#ff9500}
+</style>
+</head>
+<body>
+
+<div id="loadingScreen" class="loading-screen">Checking admin access...</div>
+
+<div id="loginScreen" style="display:none">
+  <div style="display:flex;justify-content:center;align-items:center;height:100vh;padding:20px">
+    <div style="background:#111;padding:40px;border-radius:16px;width:100%;max-width:420px;border:1px solid #333">
+      <h2 style="color:#00c896;margin-bottom:10px;text-align:center">Admin Login</h2>
+      <p style="color:#888;text-align:center;margin-bottom:20px;font-size:13px">First time? Just type email + password. Account + admin role created automatically.</p>
+      <input type="email" id="adminEmail" placeholder="Admin Email e.g. admin@yourdomain.com">
+      <input type="password" id="adminPassword" placeholder="Password - min 6 chars">
+      <button class="btn" onclick="adminLogin()" style="width:100%;margin-top:12px">Login / Create Admin</button>
+      <div class="error" id="loginError"></div>
+      <div class="success" id="loginSuccess"></div>
+    </div>
+  </div>
+</div>
+
+<div id="dashboard" style="display:none">
+  <div class="container">
+    <div class="header">
+      <h1>📊 Admin Panel</h1>
+      <div>
+        <span id="adminEmailDisplay"></span>
+        <button class="btn btn-danger" onclick="logout()" style="margin-left:10px">Logout</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('gifts')">Create Gift</div>
+      <div class="tab" onclick="switchTab('orders')">Orders</div>
+    </div>
+
+    <div id="giftsTab" class="tab-content active">
+      <div class="card">
+        <h3>➕ Create Data Gift</h3>
+        <div id="giftAlert"></div>
+        <input type="text" id="giftTitle" placeholder="Gift Title e.g. 2GB MTN">
+        <select id="dataAmount">
+          <option value="100MB">100MB</option>
+          <option value="500MB">500MB</option>
+          <option value="1GB">1GB</option>
+          <option value="2GB" selected>2GB</option>
+          <option value="5GB">5GB</option>
+          <option value="10GB">10GB</option>
+        </select>
+        <select id="network">
+          <option value="MTN">MTN</option>
+          <option value="GLO">GLO</option>
+          <option value="AIRTEL">AIRTEL</option>
+          <option value="9MOBILE">9MOBILE</option>
+        </select>
+        <select id="validity">
+          <option value="1 Day">1 Day</option>
+          <option value="7 Days" selected>7 Days</option>
+          <option value="30 Days">30 Days</option>
+        </select>
+        <textarea id="giftDesc" placeholder="Description" rows="3" style="width:100%;padding:12px;background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#fff;margin-bottom:12px"></textarea>
+        <button class="btn" onclick="createGift()">Create Gift</button>
+      </div>
+      <div class="card">
+        <h3>📦 All Gifts</h3>
+        <div id="giftsGrid"></div>
+      </div>
+    </div>
+
+    <div id="ordersTab" class="tab-content">
+      <div class="card">
+        <h3>📋 Claims & Orders</h3>
+        <table>
+          <thead><tr><th>Time</th><th>Email</th><th>Phone</th><th>Gift</th><th>Type</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody id="ordersTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCY75Whxe2i9ITdxWctl-LwmCxPugv9pk0",
+  authDomain: "chatcall-app-99bde.firebaseapp.com",
+  databaseURL: "https://chatcall-app-99bde-default-rtdb.firebaseio.com",
+  projectId: "chatcall-app-99bde",
+  storageBucket: "chatcall-app-99bde.firebasestorage.app",
+  messagingSenderId: "565789395277",
+  appId: "1:565789395277:web:02c9fb0bb869873b208f04"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+let currentAdmin = null;
+
+// EASY ADMIN AUTH - Auto creates admin on first login
+auth.onAuthStateChanged(user => {
+  if(user){
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('loadingScreen').style.display = 'flex';
+
+    db.ref('users/' + user.uid).once('value').then(snap => {
+      const data = snap.val();
+      
+      // If no record, create as admin automatically
+      if(!data){
+        return db.ref('users/' + user.uid).set({
+          email: user.email,
+          role: 'admin',
+          created: Date.now(),
+          lastSeen: Date.now()
+        }).then(() => loginSuccess(user));
+      }
+
+      // If record exists but not admin, force admin role
+      if(data.role !== 'admin'){
+        return db.ref('users/' + user.uid + '/role').set('admin').then(() => loginSuccess(user));
+      }
+
+      loginSuccess(user);
+    }).catch(err => {
+      document.getElementById('loadingScreen').innerHTML = 'Error: ' + err.message + '<br><button class="btn" onclick="location.reload()">Retry</button>';
+    });
+  } else {
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+  }
+});
+
+function adminLogin(){
+  const email = document.getElementById('adminEmail').value.trim();
+  const password = document.getElementById('adminPassword').value;
+  document.getElementById('loginError').style.display = 'none';
+
+  if(!email || password.length < 6){
+    showError('Enter email and password 6+ characters');
+    return;
+  }
+
+  // Try login first
+  auth.signInWithEmailAndPassword(email, password)
+.catch(err => {
+    // If user not found, create new admin account
+    if(err.code === 'auth/user-not-found'){
+      auth.createUserWithEmailAndPassword(email, password)
+.then(cred => {
+        db.ref('users/' + cred.user.uid).set({
+          email: email,
+          role: 'admin',
+          created: Date.now(),
+          lastSeen: Date.now()
+        });
+        showSuccess('Admin account created! Logging in...');
+      })
+.catch(e => showError(e.message));
+    } else if(err.code === 'auth/wrong-password'){
+      showError('Wrong password for this email');
+    } else {
+      showError(err.message);
+    }
+  });
+}
+
+function showError(msg){
+  document.getElementById('loginError').textContent = msg;
+  document.getElementById('loginError').style.display = 'block';
+}
+
+function showSuccess(msg){
+  document.getElementById('loginSuccess').textContent = msg;
+  document.getElementById('loginSuccess').style.display = 'block';
+}
+
+function loginSuccess(user){
+  currentAdmin = user;
+  document.getElementById('adminEmailDisplay').textContent = user.email;
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  loadGifts();
+  loadOrders();
+}
+
+function logout(){
+  auth.signOut().then(() => location.reload());
+}
+
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById(tab+'Tab').classList.add('active');
+}
+
+function createGift(){
+  const title = document.getElementById('giftTitle').value.trim();
+  const amount = document.getElementById('dataAmount').value;
+  const network = document.getElementById('network').value;
+  const validity = document.getElementById('validity').value;
+  const desc = document.getElementById('giftDesc').value.trim();
+  
+  if(!title){alert('Enter gift title');return}
+
+  const giftId = Date.now();
+  db.ref('dataLinks/' + giftId).set({
+    title:title,
+    dataAmount:amount,
+    network:network,
+    validity:validity,
+    description:desc,
+    createdAt:Date.now(),
+    createdBy:currentAdmin.email,
+    active:true
+  }).then(() => {
+    document.getElementById('giftAlert').innerHTML = '<div class="success" style="display:block">Gift created!</div>';
+    document.getElementById('giftTitle').value = '';
+    document.getElementById('giftDesc').value = '';
+    setTimeout(() => document.getElementById('giftAlert').innerHTML = '', 3000);
+  });
+}
+
+function loadGifts(){
+  db.ref('dataLinks').on('value', snap => {
+    const grid = document.getElementById('giftsGrid');
+    grid.innerHTML = '';
+    if(!snap.exists()){grid.innerHTML = '<div style="color:#666">No gifts yet</div>';return}
+    snap.forEach(child => {
+      const d = child.val();
+      grid.innerHTML += `
+        <div class="gift-card">
+          <h4>🎁 ${d.title}</h4>
+          <div class="data-amount">${d.dataAmount} ${d.network}</div>
+          <div style="font-size:12px;color:#888">Validity: ${d.validity}</div>
+          <button class="btn btn-danger" style="margin-top:10px;padding:6px 12px;font-size:12px" onclick="deleteGift('${child.key}')">Delete</button>
+        </div>
+      `;
+    });
+  });
+}
+
+function deleteGift(id){
+  if(confirm('Delete?')) db.ref('dataLinks/' + id).remove();
+}
+
+function loadOrders(){
+  db.ref('claims').on('value', snap => {
+    const tbody = document.getElementById('ordersTable');
+    tbody.innerHTML = '';
+    snap.forEach(giftSnap=>{
+      giftSnap.forEach(claimSnap=>{
+        const c = claimSnap.val();
+        const time = new Date(c.time).toLocaleString();
+        const type = c.type === 'support'? '<span class="badge badge-paid">Paid ₦500</span>' : '<span class="badge badge-pending">Free</span>';
+        const status = c.delivered? '<span class="badge badge-delivered">Delivered</span>' : '<span class="badge badge-pending">Pending</span>';
+        const action =!c.delivered? `<button class="btn" style="padding:6px 12px;font-size:12px" onclick="markDelivered('${giftSnap.key}','${claimSnap.key}')">Mark Delivered</button>` : '';
+        tbody.innerHTML += `<tr><td>${time}</td><td>${c.email}</td><td>${c.phone}</td><td>${c.giftTitle}</td><td>${type}</td><td>${status}</td><td>${action}</td></tr>`;
+      });
+    });
+  });
+}
+
+function markDelivered(giftId, claimId){
+  db.ref('claims/' + giftId + '/' + claimId).update({
+    delivered:true,
+    deliveredAt:Date.now()
+  });
+}
+</script>
+</body>
+</html>
