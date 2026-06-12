@@ -14,6 +14,7 @@ body {background:#0a0a0a;color:#fff}
 .btn {padding:12px 20px;background:#00c896;color:#000;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:14px}
 .btn:hover {opacity:0.9}
 .btn-danger {background:#ff3b30;color:#fff}
+.btn-small {padding:6px 12px;font-size:12px}
 .card {background:#111;border:1px solid #2a2a2a;border-radius:16px;padding:25px;margin-bottom:20px}
 .card h3 {margin-bottom:15px;font-size:18px;color:#00c896}
 input {width:100%;padding:12px;background:#1a1a1a;border:1px solid #333;border-radius:8px;color:#fff;margin-bottom:12px;font-size:14px}
@@ -21,7 +22,7 @@ input:focus {outline:none;border-color:#00c896}
 .error {background:#ff3b30;padding:12px;border-radius:8px;margin-bottom:15px;display:none}
 .success {background:#34c759;padding:12px;border-radius:8px;margin-bottom:15px;display:none}
 .loading-screen {position:fixed;top:0;left:0;width:100%;height:100%;background:#0a0a0a;display:flex;align-items:center;justify-content:center;z-index:9999;font-size:18px;color:#00c896}
-.tabs {display:flex;gap:10px;margin-bottom:20px;border-bottom:1px solid #222}
+.tabs {display:flex;gap:10px;margin-bottom:20px;border-bottom:1px solid #222;flex-wrap:wrap}
 .tab {padding:12px 20px;cursor:pointer;color:#888;border-bottom:2px solid transparent}
 .tab.active {color:#00c896;border-bottom-color:#00c896}
 .tab-content {display:none}
@@ -35,6 +36,9 @@ td {padding:12px;border-bottom:1px solid #222}
 .badge-paid {background:#3a2a1a;color:#ff9500}
 .badge-delivered {background:#1a3a2a;color:#34c759}
 .badge-pending {background:#3a2a1a;color:#ff9500}
+.badge-truth {background:#1a3a2a;color:#00c896}
+.badge-dare {background:#3a2a1a;color:#ff9500}
+.badge-earned {background:#2a2a3a;color:#8ab4f8}
 </style>
 </head>
 <body>
@@ -68,6 +72,7 @@ td {padding:12px;border-bottom:1px solid #222}
     <div class="tabs">
       <div class="tab active" onclick="switchTab('gifts')">Create Gift</div>
       <div class="tab" onclick="switchTab('orders')">Orders</div>
+      <div class="tab" onclick="switchTab('wheel')">Wheel Activity</div>
     </div>
 
     <div id="giftsTab" class="tab-content active">
@@ -112,6 +117,25 @@ td {padding:12px;border-bottom:1px solid #222}
         </table>
       </div>
     </div>
+
+    <!-- Wheel Activity Tab with Admin Controls -->
+    <div id="wheelTab" class="tab-content">
+      <div class="card">
+        <h3>🎯 Truth or Dare Wheel Spins</h3>
+        <p style="color:#888;font-size:13px;margin-bottom:15px">See who spun, what result they got, and what question showed</p>
+        
+        <!-- NEW: Admin Control Buttons -->
+        <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+          <button class="btn btn-danger btn-small" onclick="clearAllSpins()">🗑️ Clear All Spins Data</button>
+          <button class="btn btn-small" onclick="refreshWheelTable()">🔄 Refresh Table</button>
+        </div>
+
+        <table>
+          <thead><tr><th>Time</th><th>Email</th><th>Result</th><th>Question</th><th>Spins Left</th><th>Action</th></tr></thead>
+          <tbody id="wheelTable"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -136,7 +160,6 @@ const db = firebase.database();
 
 let currentAdmin = null;
 
-// EASY ADMIN AUTH - Auto creates admin on first login
 auth.onAuthStateChanged(user => {
   if(user){
     document.getElementById('loginScreen').style.display = 'none';
@@ -145,8 +168,6 @@ auth.onAuthStateChanged(user => {
 
     db.ref('users/' + user.uid).once('value').then(snap => {
       const data = snap.val();
-      
-      // If no record, create as admin automatically
       if(!data){
         return db.ref('users/' + user.uid).set({
           email: user.email,
@@ -155,12 +176,9 @@ auth.onAuthStateChanged(user => {
           lastSeen: Date.now()
         }).then(() => loginSuccess(user));
       }
-
-      // If record exists but not admin, force admin role
       if(data.role !== 'admin'){
         return db.ref('users/' + user.uid + '/role').set('admin').then(() => loginSuccess(user));
       }
-
       loginSuccess(user);
     }).catch(err => {
       document.getElementById('loadingScreen').innerHTML = 'Error: ' + err.message + '<br><button class="btn" onclick="location.reload()">Retry</button>';
@@ -181,10 +199,8 @@ function adminLogin(){
     return;
   }
 
-  // Try login first
   auth.signInWithEmailAndPassword(email, password)
 .catch(err => {
-    // If user not found, create new admin account
     if(err.code === 'auth/user-not-found'){
       auth.createUserWithEmailAndPassword(email, password)
 .then(cred => {
@@ -222,6 +238,7 @@ function loginSuccess(user){
   document.getElementById('dashboard').style.display = 'block';
   loadGifts();
   loadOrders();
+  loadWheelSpins();
 }
 
 function logout(){
@@ -307,6 +324,58 @@ function markDelivered(giftId, claimId){
     delivered:true,
     deliveredAt:Date.now()
   });
+}
+
+// Load wheel spins + Admin controls
+function loadWheelSpins(){
+  db.ref('wheelSpins').on('value', snap => {
+    const tbody = document.getElementById('wheelTable');
+    tbody.innerHTML = '';
+    if(!snap.exists()){tbody.innerHTML='<tr><td colspan="6" style="color:#666;text-align:center">No spins yet</td></tr>';return}
+    
+    snap.forEach(userSnap=>{
+      const uid = userSnap.key;
+      db.ref('users/'+uid+'/email').once('value').then(emailSnap=>{
+        const email = emailSnap.val() || uid;
+        userSnap.forEach(dateSnap=>{
+          const data = dateSnap.val();
+          const time = new Date(data.lastSpin || Date.now()).toLocaleString();
+          const resultBadge = data.lastResult === 'Truth' ? 
+            '<span class="badge badge-truth">Truth</span>' : 
+            '<span class="badge badge-dare">Dare</span>';
+          const question = data.lastQuestion || '-';
+          const spinsLeft = data.count !== undefined ? data.count : 0;
+          
+          // NEW: Reset button for each user
+          const resetBtn = `<button class="btn btn-small" onclick="resetUserSpins('${uid}','${dateSnap.key}')">Reset 3 Spins</button>`;
+          
+          tbody.innerHTML += `<tr><td>${time}</td><td>${email}</td><td>${resultBadge}</td><td style="max-width:300px">${question}</td><td>${spinsLeft}</td><td>${resetBtn}</td></tr>`;
+        });
+      });
+    });
+  });
+}
+
+// NEW BUTTON 1: Reset specific user spins to 3
+function resetUserSpins(uid, date){
+  if(confirm('Reset this user spins to 3 for today?')){
+    db.ref('wheelSpins/'+uid+'/'+date+'/count').set(3);
+    alert('Spins reset to 3 for '+uid);
+  }
+}
+
+// NEW BUTTON 2: Clear all wheel data
+function clearAllSpins(){
+  if(confirm('Delete ALL wheel spin data? This cannot be undone!')){
+    db.ref('wheelSpins').remove().then(()=>{
+      alert('All wheel spin data cleared!');
+      refreshWheelTable();
+    });
+  }
+}
+
+function refreshWheelTable(){
+  loadWheelSpins();
 }
 </script>
 </body>
